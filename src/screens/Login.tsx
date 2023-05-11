@@ -26,13 +26,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   return (
     <div className="login-container">
-      <h1>Login</h1>
       <form
         action="#"
         method="POST"
         className="mx-auto mt-16 max-w-xs sm:mt-20"
       >
-        <div>
+        <div >
+          <h1>Login</h1>
           <div>
             <Input
               label="Usuário"
