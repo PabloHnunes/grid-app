@@ -25,9 +25,9 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
     setData(data.list);
   };
 
-  useEffect(() => {
-    fetchData(userState);
-  }, []);
+  // useEffect(() => {
+  //   fetchData(userState);
+  // }, []);
 
   return (
     <div className="p-6 max-w-sm mx-auto bg-white rounded-xl shadow-lg space-x-4">
@@ -44,7 +44,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
             <th>Saldo</th>
           </tr>
         </thead>
-        <tbody>
+        {data ? <tbody>
           {data.map((item) => (
             <tr key={item.state.codigo}>
               <td>{item.state.codigo}</td>
@@ -57,7 +57,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
               <td>{item.state.saldo}</td>
             </tr>
           ))}
-        </tbody>
+        </tbody> : null}
       </table>
     </div>
   );

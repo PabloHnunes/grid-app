@@ -1,23 +1,19 @@
 import Input from "components/Input/Input";
 import User from "models/User";
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 interface LoginProps {
-  onLogin: (user: User) => void;
-  changeErrorMessage: (message: string) => void;
   userState: User;
-  errorMessage: string;
 }
 
 const Login: React.FC<LoginProps> = ({
-  onLogin,
-  userState,
-  errorMessage,
-  changeErrorMessage,
+  userState
 }) => {
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [errorUserCode, setErrorUserCode] = useState(false);
   const [errorPassword, setErrorPassword] = useState(false);
 
@@ -33,12 +29,38 @@ const Login: React.FC<LoginProps> = ({
     setPassword(event.target.value);
   };
 
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     userState.state.userCode = userCode;
     userState.state.password = password;
 
-    onLogin(userState);
+    await axios
+    .post(
+      `https://tecadilabs.tecadi.com.br:8088/tecadi/api/oauth2/v1/token`,
+      `grant_type=password&username=${userState.state.userCode}&password=${userState.state.password}`,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    )
+    .then((response: { data: { access_token: string; refresh_token: string; scope: string; token_type: string; expires_in: number; }; }) => {
+      userState.state.access_token = response.data.access_token;
+      userState.state.refresh_token =  response.data.refresh_token;
+      userState.state.scope =  response.data.scope;
+      userState.state.token_type =  response.data.token_type;
+      userState.state.expires_in =  response.data.expires_in;
+      console.log(`teste de atualizacao de estado ${userState.state.access_token}`);
+      console.log(`teste de response de estado ${response.data.access_token}`);
+      navigate("./produtos");
+    })
+    .catch((error: { response: { data: any; }; }) => {
+      setErrorMessage(
+        "Erro ao autenticar usuário verifique os dados de acesso."
+      );
+      console.log(error.response.data); // mensagem de erro
+    });
   };
 
   useEffect(() => {
@@ -49,22 +71,16 @@ const Login: React.FC<LoginProps> = ({
   }, [errorMessage]);
 
   useEffect(() => {
-    if (userState.state.access_token !== "") {
-      navigate('./produtos');
-    }
-  }, [userState.state.access_token]);
-
-  useEffect(() => {
     if (errorUserCode) {
       setErrorUserCode(!errorUserCode);
-      changeErrorMessage("");
+      setErrorMessage("");
     }
   }, [userCode]);
 
   useEffect(() => {
     if (errorPassword) {
       setErrorPassword(!errorPassword);
-      changeErrorMessage("");
+      setErrorMessage("");
       console.log(errorMessage);
     }
   }, [password]);
