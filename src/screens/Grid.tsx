@@ -14,7 +14,6 @@ interface Option {
   value: string;
   label: string;
 }
-
 interface ProdutoState {
   codigo: string;
   codigoCliente: string;
@@ -49,8 +48,43 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
   const [pesoLiquido, setPesoLiquido] = useState(0);
   const [grupo, setGrupo] = useState("");
   const [saldo, setSaldo] = useState(0);
+  const [selectedRowIndex, setSelectedRowIndex] = useState(-1);
+  const [isEdit, setIsEdit] = useState(false);
+  const [textModal , setTextModal] = useState("");
+  const [rowClick, setRowClick] = useState(false);
+
+  function getRowValues(item: ProdutoState): (string | number)[] {
+    return [
+      item.codigo,
+      item.descricao,
+      item.um,
+      item.codigoCliente,
+      item.pesoBruto,
+      item.pesoLiquido,
+      item.grupo,
+      item.saldo,
+    ];
+  }
+
+  const handleRowClick = (index: number) => {
+    setRowClick(true);
+    setSelectedRowIndex(index);
+    const rowValues = getRowValues(data[index]);
+    setProduto({
+      codigo: rowValues[0].toString(),
+      codigoCliente: rowValues[3].toString(),
+      descricao: rowValues[1].toString(),
+      um: rowValues[2].toString(),
+      pesoBruto: Number(rowValues[4]),
+      pesoLiquido: Number(rowValues[5]),
+      grupo: rowValues[6].toString(),
+      saldo: Number(rowValues[7]),
+    });
+    console.log(produto);
+  };
 
   function closeModal() {
+    setIsEdit(false);
     setIsOpen(false);
   }
 
@@ -62,6 +96,16 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
     return list.map((item) => {
       return { value: item, label: item };
     });
+  }
+
+  function setProdutoAtual(produto: ProdutoState){
+    setCodigo(produto.codigo);
+    setCodigoCliente(produto.codigoCliente);
+    setDescricao(produto.descricao);
+    setPesoBruto(produto.pesoBruto);
+    setPesoLiquido(produto.pesoLiquido);
+    setGrupo(produto.grupo);
+    setUm(produto.um);
   }
 
   const navigate = useNavigate();
@@ -154,28 +198,85 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
       });
   };
 
+
+  const updateProduto = async (produto: ProdutoState) => {
+    const token = userState.state.access_token;
+    const data = {
+      codigo: produto.codigo,
+      codigoCliente: produto.codigoCliente,
+      descricao: produto.descricao,
+      um: produto.um,
+      pesoBruto: produto.pesoBruto,
+      pesoLiquido: produto.pesoLiquido,
+      grupo: produto.grupo,
+    };
+    await axios
+      .put(
+        `https://tecadilabs.tecadi.com.br:8088/tecadi/treinamento/produto`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      .then((response) => {
+        console.log(response);
+      })
+      .catch((error) => {
+        console.log(error.response.data); // mensagem de erro
+      });
+  };
+
+  const deleteProduto = async (produto: ProdutoState) => {
+    const token = userState.state.access_token;
+    await axios
+      .delete(
+        `https://tecadilabs.tecadi.com.br:8088/tecadi/treinamento/produto?codigo=${produto.codigo}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      .then((response) => {
+        console.log(response);
+      })
+      .catch((error) => {
+        console.log(error.response.data); // mensagem de erro
+      });
+  };
+
+
   useEffect(() => {
     if (userState.state.access_token === "") {
       navigate("/", { replace: true });
     } else {
       getGrupos();
       getUnidadeMedida();
-      // fetchData();
     }
   }, []);
   useEffect(() => {
-    data.push(produto);
+    if(produto.codigoCliente !== "" && !isEdit && !rowClick){
+      data.push(produto);
+    }
   }, [produto]);
 
   useEffect(() => {
-    setCodigo("");
-    setCodigoCliente("");
-    setDescricao("");
-    setGrupo("");
-    setUm("");
-    setPesoBruto(0);
-    setPesoLiquido(0);
+    if(!isEdit){
+      setCodigo("");
+      setCodigoCliente("");
+      setDescricao("");
+      setGrupo("");
+      setUm("");
+      setPesoBruto(0);
+      setPesoLiquido(0);
+    }
   }, [isOpen]);
+
+  useEffect(()=>{
+    setTextModal(!isEdit ? "Cadastrar Produto" : `Editar Produto:${codigo}`);
+  },[isEdit])
 
   return (
     <>
@@ -193,7 +294,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
       <div className=" shadow-lg ">
         <table className="w-full">
           <thead>
-            <tr className="  grid grid-cols-9 mt-5 justify-items-center">
+            <tr className="  grid grid-cols-10 mt-5 justify-items-center">
               <th>Código</th>
               <th>Descrição</th>
               <th>Unidade Medida</th>
@@ -202,15 +303,19 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
               <th>Peso Liquído</th>
               <th>Grupo</th>
               <th>Saldo</th>
-              <th>Update</th>
+              <th></th>
+              <th></th>
             </tr>
           </thead>
           {data ? (
             <tbody className="w-full">
-              {data.map((item) => (
+              {data.map((item, index) => (
                 <tr
-                  className="grid grid-cols-9 text-center justify-items-center"
+                  className={`grid grid-cols-10 text-center justify-items-center ${
+                    selectedRowIndex === index ? "bg-gray-300" : ""
+                  }`}
                   key={item.codigo}
+                  onClick={() => handleRowClick(index)}
                 >
                   <td className="m-3">{item.codigo}</td>
                   <td className="m-3">{item.descricao}</td>
@@ -220,6 +325,33 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                   <td className="m-3">{item.pesoLiquido}</td>
                   <td className="m-3">{item.grupo}</td>
                   <td className="m-3">{item.saldo}</td>
+                  <td className="m-3 cursor-pointer ">
+                    {
+                      <button
+                        type="button"
+                        className="px-4 py-2 text-white font-medium bg-cyan-700 hover:bg-cyan-600 rounded-md"
+                        onClick={() =>{
+                          setRowClick(false);
+                          setIsEdit(true);
+                          setProdutoAtual(produto);
+                          openModal();
+                        }}
+                      >
+                        Editar
+                      </button>
+                    }
+                  </td>
+                  <td className="m-3 cursor-pointer ">
+                    {
+                      <button
+                        type="button"
+                        className="px-4 py-2 text-white font-medium bg-red-600 hover:bg-red-500 rounded-md"
+                        onClick={() => {deleteProduto(produto)}}
+                      >
+                        Delete
+                      </button>
+                    }
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -267,7 +399,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                   as="h3"
                   className="text-lg font-semibold text-center mt-3"
                 >
-                  {`${true ? "Cadastrar Produto" : codigo}`}
+                  {textModal}
                 </Dialog.Title>
                 <form onSubmit={() => {}}>
                   <div className="p-4 grid grid-cols-2 gap-2">
@@ -333,7 +465,6 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                       className="h-10 w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-indigo-600 focus:ring-2 focus:ring-inset  sm:text-sm sm:leading-6"
                       selectedValue={grupo}
                       onSelectedValueChange={(value: string) => setGrupo(value)}
-                      // value={grupo}
                     />
                     <Select
                       id="select"
@@ -371,7 +502,8 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                           grupo,
                           saldo,
                         };
-                        createProduto(newProduto);
+                        console.log({isEdit});
+                        isEdit ? updateProduto(newProduto): createProduto(newProduto)
                         setProduto(newProduto);
                         closeModal();
                       }}
