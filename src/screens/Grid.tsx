@@ -50,8 +50,10 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
   const [saldo, setSaldo] = useState(0);
   const [selectedRowIndex, setSelectedRowIndex] = useState(-1);
   const [isEdit, setIsEdit] = useState(false);
-  const [textModal , setTextModal] = useState("");
+  const [textModal, setTextModal] = useState("");
   const [rowClick, setRowClick] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [error, setError] = useState(false);
 
   function getRowValues(item: ProdutoState): (string | number)[] {
     return [
@@ -69,21 +71,11 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
   const handleRowClick = (index: number) => {
     setRowClick(true);
     setSelectedRowIndex(index);
-    const rowValues = getRowValues(data[index]);
-    setProduto({
-      codigo: rowValues[0].toString(),
-      codigoCliente: rowValues[3].toString(),
-      descricao: rowValues[1].toString(),
-      um: rowValues[2].toString(),
-      pesoBruto: Number(rowValues[4]),
-      pesoLiquido: Number(rowValues[5]),
-      grupo: rowValues[6].toString(),
-      saldo: Number(rowValues[7]),
-    });
-    console.log(produto);
   };
 
   function closeModal() {
+    setError(false);
+    setErrorMessage("");
     setIsEdit(false);
     setIsOpen(false);
   }
@@ -98,7 +90,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
     });
   }
 
-  function setProdutoAtual(produto: ProdutoState){
+  function setProdutoAtual(produto: ProdutoState) {
     setCodigo(produto.codigo);
     setCodigoCliente(produto.codigoCliente);
     setDescricao(produto.descricao);
@@ -106,6 +98,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
     setPesoLiquido(produto.pesoLiquido);
     setGrupo(produto.grupo);
     setUm(produto.um);
+    setErrorMessage("");
   }
 
   const navigate = useNavigate();
@@ -161,10 +154,14 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
           },
         }
       )
-      .then((response: { data: { offSet: number, limit: number , list: Array<ProdutoState> } }) => {
-        console.log(response.data);
-        setData(response.data.list);
-      })
+      .then(
+        (response: {
+          data: { offSet: number; limit: number; list: Array<ProdutoState> };
+        }) => {
+          console.log(response.data);
+          setData(response.data.list);
+        }
+      )
       .catch((error: { response: { data: any } }) => {
         console.log(error.response.data); // mensagem de erro
       });
@@ -199,17 +196,14 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
       });
   };
 
-
   const updateProduto = async (produto: ProdutoState) => {
     const token = userState.state.access_token;
     const data = {
       codigo: produto.codigo,
-      codigoCliente: produto.codigoCliente,
       descricao: produto.descricao,
       um: produto.um,
       pesoBruto: produto.pesoBruto,
       pesoLiquido: produto.pesoLiquido,
-      grupo: produto.grupo,
     };
     await axios
       .put(
@@ -222,10 +216,11 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
         }
       )
       .then((response) => {
+        fetchData();
         console.log(response);
       })
       .catch((error) => {
-        console.log(error.response.data); // mensagem de erro
+        setErrorMessage(error.response.data);
       });
   };
 
@@ -245,10 +240,10 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
         fetchData();
       })
       .catch((error) => {
+        alert(error.response.data);
         console.log(error.response.data); // mensagem de erro
       });
   };
-
 
   useEffect(() => {
     if (userState.state.access_token === "") {
@@ -259,14 +254,15 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
       getUnidadeMedida();
     }
   }, []);
+
   useEffect(() => {
-    if(produto.codigoCliente !== "" && !isEdit && !rowClick){
-      data.push(produto);
+    if (produto.codigoCliente !== "" && isEdit && !rowClick) {
+      setProdutoAtual(produto);
     }
   }, [produto]);
 
   useEffect(() => {
-    if(!isEdit){
+    if (!isEdit) {
       setCodigo("");
       setCodigoCliente("");
       setDescricao("");
@@ -274,12 +270,30 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
       setUm("");
       setPesoBruto(0);
       setPesoLiquido(0);
+      setErrorMessage("");
     }
   }, [isOpen]);
 
-  useEffect(()=>{
+  useEffect(() => {
     setTextModal(!isEdit ? "Cadastrar Produto" : `Editar Produto:${codigo}`);
-  },[isEdit])
+  }, [isEdit]);
+
+  useEffect(() => { setError(true) }, [errorMessage]);
+  useEffect(() => {
+    if(selectedRowIndex !== -1){
+    const rowValues = getRowValues(data[selectedRowIndex]);
+    setProduto({
+      codigo: rowValues[0].toString(),
+      codigoCliente: rowValues[3].toString(),
+      descricao: rowValues[1].toString(),
+      um: rowValues[2].toString(),
+      pesoBruto: Number(rowValues[4]),
+      pesoLiquido: Number(rowValues[5]),
+      grupo: rowValues[6].toString(),
+      saldo: Number(rowValues[7]),
+    });
+  }
+  },[selectedRowIndex]);
 
   return (
     <>
@@ -295,22 +309,22 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
         </div>
       </div>
       {data ? (
-      <div className=" shadow-lg ">
-        <table className="w-full">
-          <thead>
-            <tr className="  grid grid-cols-10 mt-5 justify-items-center">
-              <th>Código</th>
-              <th>Descrição</th>
-              <th>Unidade Medida</th>
-              <th>Cod. Cliente</th>
-              <th>Peso Bruto</th>
-              <th>Peso Liquído</th>
-              <th>Grupo</th>
-              <th>Saldo</th>
-              <th></th>
-              <th></th>
-            </tr>
-          </thead>
+        <div className=" shadow-lg ">
+          <table className="w-full">
+            <thead>
+              <tr className="  grid grid-cols-10 mt-5 justify-items-center">
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>Unidade Medida</th>
+                <th>Cod. Cliente</th>
+                <th>Peso Bruto</th>
+                <th>Peso Liquído</th>
+                <th>Grupo</th>
+                <th>Saldo</th>
+                <th></th>
+                <th></th>
+              </tr>
+            </thead>
             <tbody className="w-full">
               {data.map((item, index) => (
                 <tr
@@ -333,7 +347,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                       <button
                         type="button"
                         className="px-4 py-2 text-white font-medium bg-cyan-700 hover:bg-cyan-600 rounded-md"
-                        onClick={() =>{
+                        onClick={() => {
                           setRowClick(false);
                           setIsEdit(true);
                           setProdutoAtual(produto);
@@ -349,7 +363,9 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                       <button
                         type="button"
                         className="px-4 py-2 text-white font-medium bg-red-600 hover:bg-red-500 rounded-md"
-                        onClick={() => {deleteProduto(produto)}}
+                        onClick={() => {
+                          deleteProduto(produto);
+                        }}
                       >
                         Delete
                       </button>
@@ -358,8 +374,8 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                 </tr>
               ))}
             </tbody>
-        </table>
-      </div>
+          </table>
+        </div>
       ) : null}
       <Transition appear show={isOpen} as={Fragment}>
         <Dialog as="div" className="float z-10" onClose={closeModal}>
@@ -412,6 +428,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                       id="cod_cliente"
                       label="Cód. Cliente"
                       value={codigoCliente}
+                      disabled={isEdit}
                       onChange={(e) => {
                         setCodigoCliente(e.target.value);
                       }}
@@ -467,6 +484,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                       data={grupos}
                       className="h-10 w-full rounded-md border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-indigo-600 focus:ring-2 focus:ring-inset  sm:text-sm sm:leading-6"
                       selectedValue={grupo}
+                      disabled={isEdit}
                       onSelectedValueChange={(value: string) => setGrupo(value)}
                     />
                     <Select
@@ -478,6 +496,11 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                       onSelectedValueChange={(value: string) => setUm(value)}
                     />
                   </div>
+                  {errorMessage !== "" ? (
+                    <h1 className="block ml-4 text-sm font-semibold leading-6 text-red-700">
+                      {errorMessage}
+                    </h1>
+                  ) : null}
                   <div className="flex justify-center mb-5">
                     <button
                       type="button"
@@ -492,7 +515,8 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                         codigoCliente === "" ||
                         descricao === "" ||
                         grupo === "" ||
-                        um === ""
+                        um === "" ||
+                        errorMessage !== "" 
                       }
                       onClick={() => {
                         const newProduto: ProdutoState = {
@@ -505,10 +529,14 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                           grupo,
                           saldo,
                         };
-                        console.log({isEdit});
-                        isEdit ? updateProduto(newProduto): createProduto(newProduto)
+                        
+                        isEdit
+                          ? updateProduto(newProduto)
+                          : createProduto(newProduto);
                         setProduto(newProduto);
-                        closeModal();
+
+                      
+                        if(!error) closeModal();
                       }}
                       className="px-4 py-2 ml-4 bg-blue-600 text-white rounded-md disabled:cursor-not-allowed disabled:bg-indigo-200"
                     >
