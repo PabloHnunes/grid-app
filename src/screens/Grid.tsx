@@ -161,9 +161,9 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
           },
         }
       )
-      .then((response: { data: { list: Array<string> } }) => {
+      .then((response: { data: { offSet: number, limit: number , list: Array<ProdutoState> } }) => {
         console.log(response.data);
-        //setData(response.data.list);
+        setData(response.data.list);
       })
       .catch((error: { response: { data: any } }) => {
         console.log(error.response.data); // mensagem de erro
@@ -192,6 +192,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
       )
       .then((response) => {
         console.log(response);
+        fetchData();
       })
       .catch((error) => {
         console.log(error.response.data); // mensagem de erro
@@ -241,6 +242,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
       )
       .then((response) => {
         console.log(response);
+        fetchData();
       })
       .catch((error) => {
         console.log(error.response.data); // mensagem de erro
@@ -252,6 +254,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
     if (userState.state.access_token === "") {
       navigate("/", { replace: true });
     } else {
+      fetchData();
       getGrupos();
       getUnidadeMedida();
     }
@@ -291,6 +294,7 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
           </button>
         </div>
       </div>
+      {data ? (
       <div className=" shadow-lg ">
         <table className="w-full">
           <thead>
@@ -307,7 +311,6 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
               <th></th>
             </tr>
           </thead>
-          {data ? (
             <tbody className="w-full">
               {data.map((item, index) => (
                 <tr
@@ -355,9 +358,9 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
                 </tr>
               ))}
             </tbody>
-          ) : null}
         </table>
       </div>
+      ) : null}
       <Transition appear show={isOpen} as={Fragment}>
         <Dialog as="div" className="float z-10" onClose={closeModal}>
           <Transition.Child
