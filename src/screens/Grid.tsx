@@ -256,7 +256,9 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
   }, []);
 
   useEffect(() => {
-    if (produto.codigoCliente !== "" && isEdit && !rowClick) {
+    console.log(`isEdit : ${isEdit}`);
+    console.log(`rowClick : ${rowClick}`);
+    if (produto.codigoCliente !== "" && isEdit ) {
       setProdutoAtual(produto);
     }
   }, [produto]);
@@ -279,9 +281,12 @@ const Grid: React.FC<GridProps> = ({ userState }) => {
   }, [isEdit]);
 
   useEffect(() => { setError(true) }, [errorMessage]);
+  
   useEffect(() => {
+    console.log(selectedRowIndex);
     if(selectedRowIndex !== -1){
     const rowValues = getRowValues(data[selectedRowIndex]);
+    console.log(rowValues);
     setProduto({
       codigo: rowValues[0].toString(),
       codigoCliente: rowValues[3].toString(),
